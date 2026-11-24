@@ -45,13 +45,13 @@ const D=[["sec","تقييم الدورة"],["r","الأهداف العامة ل�
 ["sec","النواحي الإدارية للتدريب"],["r","حجرة التدريب كانت نظيفة"],["r","حجرة التدريب مناسبة من حيث الإضاءة والمقاعد والتهوية"],["r","تم توزيع المادة التدريبية بشكل منظم على المتدربين"],["r","الاستدعاء للتدريب تم قبل التدريب بوقت كاف"],
 ["t","أفضل ما تم التدرب عليه"],["t","الإيجابيات"],["t","المقترحات"]];
 const blankC=()=>({name:"",nameEn:"",trainer:"",trainerEn:"",hours:"",from:"",to:"",place:"",f1:"",f2:"",f3:""});
-const defCfg=()=>({v:5,title:"استبانة قياس رضا متدرب عن دورة تدريبية",logo:"",headerImg:"",headerW:0,headerH:0,headerFit:"contain",headerOnly:false,form:{code:"HR-F28",date:"17/11/2022",rev:"REV.0"},course:blankC(),sign:{t:"القائم بأعمال المدير العام بالمدارس",n:"أ. طارق أحمد بامؤمن"},cd:{},cx:[],fl:["","",""],theme:{},items:D.map((d,i)=>({id:"q"+i,k:d[0],t:d[1],req:d[0]=="r"}))});
+const defCfg=()=>({v:5,title:"استبانة قياس رضا متدرب عن دورة تدريبية",logo:"",headerImg:"",headerW:0,headerH:0,headerFit:"contain",headerOnly:false,form:{code:"HR-F28",date:"17/11/2022",rev:"REV.0",closed:false,closedMsg:"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.",onceOnly:true,showCert:true},course:blankC(),sign:{t:"القائم بأعمال المدير العام بالمدارس",n:"أ. طارق أحمد بامؤمن"},cd:{},cx:[],fl:["","",""],theme:{},items:D.map((d,i)=>({id:"q"+i,k:d[0],t:d[1],req:d[0]=="r"}))});
 function mc(o){const d=defCfg(),c={...d,...o};c.course={...d.course,...o.course};c.form={...d.form,...o.form};c.sign={...d.sign,...o.sign};c.theme={...(o.theme||{})};c.cd=o.cd||{};c.cx=o.cx||[];c.fl=[0,1,2].map(i=>(o.fl||[])[i]||"");
   if((o.v||0)<4){if(o.v==3)c.logo=""}
   if(o.v==4&&o.red===false)c.theme.cf="#4a1230";
   c.v=5;return c}
 // الصق رابط تطبيق الويب (Google Apps Script Web App URL) هنا بعد نشر Code.gs
-const GAS_URL="https://script.google.com/macros/s/AKfycbwb2zZIan7G-DIa0Rk2KHFhzeMW2MbYgtZDnsHWzVrRuGOFuS_VMGxPTjpaI9upUwtjrA/exec";
+const GAS_URL="https://script.google.com/macros/s/AKfycbxCydMFRywrKIHzKZlPUyOmRpEAl_MqSNFrMrjD_6A9oFhkXHKXwdLPB67F7rGiAkC-Rw/exec";
 const LOCAL_DEFAULT_PASS="admin1234";
 
 let cfg=defCfg(),resp=[],mgr=false,adminPass="",view="form",tab="build",local=[],done=null,mine=null,fc="",sel=null,fl={y:"",m:"",d:"",c:"",q:""},cur={rs:[],it:[]};
@@ -62,6 +62,7 @@ const SS={g(k){try{return sessionStorage.getItem(k)||""}catch(e){return""}},s(k,
 const getGasUrl=()=>GAS_URL||LS.g("ce_gas_url")||"";
 const p2=n=>String(n).padStart(2,"0"),fd=s=>{if(!s)return null;const a=s.split("-");return{y:+a[0],m:+a[1],d:+a[2]}},dk=t=>{const x=new Date(t);return x.getFullYear()+"-"+p2(x.getMonth()+1)+"-"+p2(x.getDate())};
 const rc=r=>r.course||cfg.course,ri=r=>r.items||cfg.items,ck=r=>(rc(r).name||"—")+"|"+(rc(r).from||""),cl=r=>(rc(r).name||"—")+(rc(r).from?" ("+rc(r).from+")":"");
+const subKey=()=>"ce_sub_"+ck({course:cfg.course});
 const link=id=>location.href.split("#")[0]+"#cert="+id;
 
 function notify(msg,isErr){
@@ -155,14 +156,26 @@ async function init(){
   }
   applyTheme();draw();
 }
-async function saveCfg(){
+let saveCfgTimer=null,saveCfgInFlight=false,saveCfgPending=false;
+async function flushSaveCfg(showOk){
   const u=getGasUrl();
-  if(u&&adminPass){
-    try{
-      const res=await gasPost({action:"saveCfg",password:adminPass,cfg});
-      if(!res.ok)notify(res.error||"تعذر الحفظ في Google Sheets",true);
-    }catch(e){notify("تعذر الحفظ في Google Sheets",true)}
-  }else{LS.s("ce_cfg",cfg)}
+  if(!(u&&adminPass)){LS.s("ce_cfg",cfg);if(showOk)notify("تم حفظ الإعدادات محلياً");return}
+  if(saveCfgInFlight){saveCfgPending=true;return}
+  saveCfgInFlight=true;
+  try{
+    const res=await gasPost({action:"saveCfg",password:adminPass,cfg});
+    if(!res.ok)notify(res.error||"تعذر الحفظ في Google Sheets",true);
+    else if(showOk)notify("تم حفظ الإعدادات في Google Sheets بنجاح");
+  }catch(e){notify("تعذر الحفظ في Google Sheets: "+(e.message||e),true)}
+  finally{
+    saveCfgInFlight=false;
+    if(saveCfgPending){saveCfgPending=false;flushSaveCfg(false)}
+  }
+}
+function saveCfg(immediate){
+  clearTimeout(saveCfgTimer);
+  if(immediate===true)return flushSaveCfg(true);
+  saveCfgTimer=setTimeout(()=>flushSaveCfg(false),650);
 }
 function draw(){
   const h=location.hash.match(/cert=(.+)/);if(h)return drawCert(h[1]);
@@ -176,8 +189,15 @@ function head(c=cfg.course){const a=[["name","الدورة"],["trainer","الم�
   const defH=(cfg.headerImg&&cfg.headerOnly)?"":`<img src="${cfg.logo||LOGO}" style="max-height:80px;max-width:100%;margin-bottom:6px"><h1>${esc(cfg.title)}</h1>`;
   return `<div class="card" style="text-align:center">${hi}${defH}${a.length?`<div class="m">${a.join(" · ")}</div>`:""}</div>`}
 function form(){
-  if(done)return head()+`<div class="card"><h2>شكراً لتعبئتك الاستمارة ✔</h2><p>تم استلام تقييمك.</p><button onclick="location.hash='cert=${done}'">عرض شهادة الدورة</button></div>`;
-  let s=head()+`<div class="card"><div class="g"><div><label>الاسم بالعربية <span class="req">*</span></label><input id="nm"></div><div><label>الاسم بالإنجليزية <span class="req">*</span></label><input id="ne" dir="ltr" placeholder="Full name"></div><div><label>البريد الإلكتروني</label><input id="em" type="email"></div></div><p class="m">اختر التقييم المناسب لكل بند. الحقول المعلَّمة بـ <span class="req">*</span> إلزامية.</p></div><div class="card">`;
+  if(cfg.form?.closed&&!mgr){
+    return head()+`<div class="card" style="text-align:center;padding:28px 18px"><h2 style="font-size:20px;margin-bottom:10px">انتهت فترة التقييم</h2><p style="font-size:15px;margin-bottom:14px">${esc(cfg.form.closedMsg||"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.")}</p></div>`+foot();
+  }
+  const prevSub=(cfg.form?.onceOnly!==false)?LS.g(subKey()):null;
+  if(prevSub&&!done&&!mgr){
+    return head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>تم استلام تقييمك مسبقاً ✔</h2><p>يمكن تعبئة الاستمارة مرة واحدة فقط لكل متدرب في هذه الدورة.</p>${cfg.form?.showCert!==false?`<button onclick="location.hash='cert=${esc(prevSub)}'">عرض شهادة الدورة</button>`:""}</div>`+foot();
+  }
+  if(done)return head()+`<div class="card"><h2>شكراً لتعبئتك الاستمارة ✔</h2><p>تم استلام تقييمك.</p>${cfg.form?.showCert!==false?`<button onclick="location.hash='cert=${done}'">عرض شهادة الدورة</button>`:""}</div>`+foot();
+  let s=head()+(mgr&&cfg.form?.closed?`<div class="card" style="border:1px solid var(--g);background:#fff9ec"><b>تنبيه للمدير:</b> التقييم مغلق حالياً للمتدربين (ستظهر لهم نافذة انتهاء فترة التقييم).</div>`:"")+`<div class="card"><div class="g"><div><label>الاسم بالعربية <span class="req">*</span></label><input id="nm"></div><div><label>الاسم بالإنجليزية <span class="req">*</span></label><input id="ne" dir="ltr" placeholder="Full name"></div><div><label>البريد الإلكتروني</label><input id="em" type="email"></div></div><p class="m">اختر التقييم المناسب لكل بند. الحقول المعلَّمة بـ <span class="req">*</span> إلزامية.</p></div><div class="card">`;
   cfg.items.forEach(i=>{const r=i.req?'<span class="req">*</span>':"";
     if(i.k=="sec")s+=`<h2 style="margin-top:12px">${esc(i.t)}</h2>`;
     else if(i.k=="r")s+=`<div class="it"><div>${esc(i.t)} ${r}</div><div class="rt">${L.map((l,k)=>`<label style="${lvst(k)}" onclick="pick(this)"><input type="radio" name="${i.id}" value="${l[1]}"><span>${l[0]}</span></label>`).join("")}</div></div>`;
@@ -196,12 +216,17 @@ async function submit(){
   try{
     if(u){
       const res=await gasPost({action:"submit",rec});
-      if(!res.ok){$("#er").textContent=res.error||"تعذر الإرسال إلى Google Sheets";return}
+      if(!res.ok){
+        if(res.closed){cfg.form.closed=true;if(res.error)cfg.form.closedMsg=res.error;draw();return}
+        if(res.duplicate&&res.existingId){LS.s(subKey(),res.existingId);done=res.existingId;draw();notify(res.error||"تم تعبئة التقييم مسبقاً");return}
+        $("#er").textContent=res.error||"تعذر الإرسال إلى Google Sheets";return
+      }
       rec.id=res.id;resp.push(rec);
     }else{
       rec.id="l"+Date.now();local.push(rec);LS.s("ce_resp",local);resp=local;
     }
   }catch(e){$("#er").textContent="تعذر الإرسال: تحقق من الاتصال بالإنترنت ورابط Google Apps Script.";return}
+  if(cfg.form?.onceOnly!==false)LS.s(subKey(),rec.id);
   mine=rec;done=rec.id;draw();
 }
 function admin(){
@@ -248,6 +273,14 @@ async function changeAdminPass(){
 function build(){
   const u=getGasUrl();
   let s=`<div class="card"><h2>حالة الربط بـ Google Sheets</h2><div class="row" style="flex-wrap:wrap"><span class="badge ${u?"ok":"warn"}">${u?"متصل بـ Google Sheets":"الوضع المحلي (للمعاينة فقط)"}</span>${u?`<button class="s" onclick="refreshFromGas()">تحديث البيانات من الجدول</button>`:""}</div>${GAS_URL?"":`<label style="margin-top:8px;display:block">رابط تطبيق الويب (Google Apps Script URL)</label><input dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(LS.g("ce_gas_url")||"")}" onchange="saveGasUrlInput(this.value)">`}<p class="m">للتشغيل الدائم لجميع المتدربين، الصق رابط النشر (Web App URL) في المتغير <b>GAS_URL</b> داخل الكود قبل مشاركة الملف.</p></div>
+  <div class="card"><h2>التحكم في التقييم والشهادة</h2>
+  <label style="display:block;margin-bottom:8px"><input type="checkbox" style="width:auto" ${cfg.form?.closed?"checked":""} onchange="cfg.form.closed=this.checked;saveCfg(true);draw()"> <b>إغلاق رابط التقييم</b> (إظهار نافذة انتهاء فترة التقييم للمتدربين)</label>
+  <label>رسالة انتهاء فترة التقييم</label>
+  <input value="${esc(cfg.form?.closedMsg||"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.")}" onchange="cfg.form.closedMsg=this.value;saveCfg()">
+  <label style="display:block;margin-top:10px"><input type="checkbox" style="width:auto" ${cfg.form?.onceOnly!==false?"checked":""} onchange="cfg.form.onceOnly=this.checked;saveCfg(true)"> <b>السماح بالتعبئة لمرة واحدة فقط لكل متدرب</b> (يمنع التكرار من نفس المتصفح أو بنفس الاسم/البريد)</label>
+  <label style="display:block;margin-top:10px"><input type="checkbox" style="width:auto" ${cfg.form?.showCert!==false?"checked":""} onchange="cfg.form.showCert=this.checked;saveCfg(true)"> <b>إظهار الشهادة للمتدربين بعد تعبئة الاستبيان</b> (عند إلغاء التحديد تظهر رسالة شكر فقط)</label>
+  <div class="row" style="margin-top:10px"><button onclick="saveCfg(true)">حفظ الإعدادات في الجدول</button></div>
+  </div>
   <div class="card"><h2>الشعار ورأس الهيدر ورقم الاستمارة</h2><div class="row"><img src="${cfg.logo||LOGO}" style="max-height:50px"><input type="file" accept="image/*" onchange="setLogo(this)" style="width:auto">${cfg.logo?`<button class="d" onclick="cfg.logo='';saveCfg();draw()">إزالة</button>`:""}</div>
   <div style="border-top:1px solid var(--b);margin:10px 0;padding-top:10px">
     <label><b>تصميم رأس الهيدر (اختياري)</b></label>
@@ -353,6 +386,10 @@ function certHTML(r,dz){
   const o=cfg.cd.logo||{};if(!o.h||dz)h+=`<img${dc("logo")} class="${dz?"dz"+(selK=="logo"?" sel":""):""}" src="${cfg.logo||LOGO}" style="position:absolute;left:${o.l??898}px;top:${o.t??58}px;height:${o.fs??84}px${o.h?";opacity:.25":""}">`;
   return h+"</div>"}
 async function drawCert(id){
+  if(!mgr&&cfg.form?.showCert===false){
+    $("#app").innerHTML=head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>الشهادة غير متاحة حالياً</h2><p>تم إيقاف عرض الشهادات للمتدربين من قِبل الإدارة.</p><button class="s" onclick="location.hash='';draw()">العودة</button></div>`+foot();
+    return;
+  }
   let r=resp.find(x=>x.id==id)||(mine&&mine.id==id?mine:null);
   if(!r&&getGasUrl()){
     $("#app").innerHTML='<div class="card m">جارٍ تحميل الشهادة…</div>';
