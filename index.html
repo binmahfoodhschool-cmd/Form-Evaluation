@@ -45,17 +45,17 @@ const D=[["sec","تقييم الدورة"],["r","الأهداف العامة ل�
 ["sec","النواحي الإدارية للتدريب"],["r","حجرة التدريب كانت نظيفة"],["r","حجرة التدريب مناسبة من حيث الإضاءة والمقاعد والتهوية"],["r","تم توزيع المادة التدريبية بشكل منظم على المتدربين"],["r","الاستدعاء للتدريب تم قبل التدريب بوقت كاف"],
 ["t","أفضل ما تم التدرب عليه"],["t","الإيجابيات"],["t","المقترحات"]];
 const blankC=()=>({name:"",nameEn:"",trainer:"",trainerEn:"",hours:"",from:"",to:"",place:"",f1:"",f2:"",f3:""});
-const defCfg=()=>({v:5,title:"استبانة قياس رضا متدرب عن دورة تدريبية",logo:"",headerImg:"",headerW:0,headerH:0,headerFit:"contain",headerOnly:false,form:{code:"HR-F28",date:"17/11/2022",rev:"REV.0",closed:false,closedMsg:"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.",onceOnly:true,showCert:true},course:blankC(),sign:{t:"القائم بأعمال المدير العام بالمدارس",n:"أ. طارق أحمد بامؤمن"},cd:{},cx:[],fl:["","",""],theme:{},items:D.map((d,i)=>({id:"q"+i,k:d[0],t:d[1],req:d[0]=="r"}))});
-function mc(o){const d=defCfg(),c={...d,...o};c.course={...d.course,...o.course};c.form={...d.form,...o.form};c.sign={...d.sign,...o.sign};c.theme={...(o.theme||{})};c.cd=o.cd||{};c.cx=o.cx||[];c.fl=[0,1,2].map(i=>(o.fl||[])[i]||"");
+const defCfg=()=>({v:5,title:"استبانة قياس رضا متدرب عن دورة تدريبية",logo:"",headerImg:"",headerW:0,headerH:0,headerFit:"contain",headerOnly:false,form:{code:"HR-F28",date:"17/11/2022",rev:"REV.0",closed:false,closedMsg:"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.",onceOnly:true,showCert:true,closeAt:"",allowEdit:false,thanksTitle:"شكراً لتعبئتك الاستمارة ✔",thanksMsg:"تم استلام تقييمك.",collectEmail:true,collectPhone:false,reqContact:false,waCc:"967",waMsg:"السلام عليكم {name}،\nيسرنا إرسال شهادة مشاركتكم في دورة «{course}».\nرابط الشهادة:\n{link}\nمع تمنياتنا لكم بالتوفيق."},course:blankC(),sign:{t:"القائم بأعمال المدير العام بالمدارس",n:"أ. طارق أحمد بامؤمن"},cd:{},cx:[],fl:["","",""],theme:{},courses:[],libHide:[],items:D.map((d,i)=>({id:"q"+i,k:d[0],t:d[1],req:d[0]=="r"}))});
+function mc(o){const d=defCfg(),c={...d,...o};c.course={...d.course,...o.course};c.form={...d.form,...o.form};c.sign={...d.sign,...o.sign};c.theme={...(o.theme||{})};c.cd=o.cd||{};c.cx=o.cx||[];c.courses=Array.isArray(o.courses)?o.courses:[];c.libHide=Array.isArray(o.libHide)?o.libHide:[];c.fl=[0,1,2].map(i=>(o.fl||[])[i]||"");
   if((o.v||0)<4){if(o.v==3)c.logo=""}
   if(o.v==4&&o.red===false)c.theme.cf="#4a1230";
   c.v=5;return c}
 // الصق رابط تطبيق الويب (Google Apps Script Web App URL) هنا بعد نشر Code.gs
-const GAS_URL="https://script.google.com/macros/s/AKfycbxCydMFRywrKIHzKZlPUyOmRpEAl_MqSNFrMrjD_6A9oFhkXHKXwdLPB67F7rGiAkC-Rw/exec";
+const GAS_URL="https://script.google.com/macros/s/AKfycby-lz8nQpeZTkFGCr6t-eb6WCS6xToECSPaunUD5Ech0i8aX690ZFA5dJbSmUx3Qz6Zkg/exec";
 const LOCAL_DEFAULT_PASS="admin1234";
 
 let cfg=defCfg(),resp=[],mgr=false,adminPass="",view="form",tab="build",local=[],done=null,mine=null,fc="",sel=null,fl={y:"",m:"",d:"",c:"",q:""},cur={rs:[],it:[]};
-let bgData="",selK=null,modalEl=null,toastTimer=null;
+let bgData="",selK=null,modalEl=null,toastTimer=null,editing=null,libSel="",pfc="",waQ=[],waI=0;
 const $=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const LS={g(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},s(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const SS={g(k){try{return sessionStorage.getItem(k)||""}catch(e){return""}},s(k,v){try{v?sessionStorage.setItem(k,v):sessionStorage.removeItem(k)}catch(e){}}};
@@ -63,7 +63,38 @@ const getGasUrl=()=>GAS_URL||LS.g("ce_gas_url")||"";
 const p2=n=>String(n).padStart(2,"0"),fd=s=>{if(!s)return null;const a=s.split("-");return{y:+a[0],m:+a[1],d:+a[2]}},dk=t=>{const x=new Date(t);return x.getFullYear()+"-"+p2(x.getMonth()+1)+"-"+p2(x.getDate())};
 const rc=r=>r.course||cfg.course,ri=r=>r.items||cfg.items,ck=r=>(rc(r).name||"—")+"|"+(rc(r).from||""),cl=r=>(rc(r).name||"—")+(rc(r).from?" ("+rc(r).from+")":"");
 const subKey=()=>"ce_sub_"+ck({course:cfg.course});
-const link=id=>location.href.split("#")[0]+"#cert="+id;
+const link=id=>location.href.split("#")[0]+"#cert="+id+"&wa=1";
+const closedNow=()=>{const f=cfg.form||{};return !!(f.closed||(f.closeAt&&Date.now()>=new Date(f.closeAt).getTime()))};
+const myKey=()=>"ce_my_"+ck({course:cfg.course}),myRec=()=>LS.g(myKey());
+const canEdit=()=>{const m=myRec();return !!(cfg.form?.allowEdit&&!closedNow()&&m&&!m.edited)};
+const fmtDT=t=>{try{return new Date(t).toLocaleString("ar",{dateStyle:"full",timeStyle:"short"})}catch(e){return t}};
+const thanksT=(t,d)=>{const m=myRec(),n=(mine&&mine.name)||(m&&m.rec&&m.rec.name)||"";return esc(t||d).replace(/\{name\}/g,esc(n)).replace(/\n/g,"<br>")};
+const editHint=()=>{if(!cfg.form?.allowEdit)return"";const m=myRec();if(!m)return"";
+  if(canEdit())return `<p class="m">يمكنك تعديل إجاباتك مرة واحدة فقط ما دام الاستبيان مفتوحاً، وسيتم تحديث ردك السابق دون احتسابه مشاركة جديدة.</p><p><button class="s" onclick="startEdit()">تعديل ردي (مرة واحدة)</button></p>`;
+  if(m.edited)return `<p class="m">تم استخدام فرصة التعديل المتاحة لك.</p>`;return""};
+const live=()=>resp.filter(r=>!r.deleted);
+async function setDeleted(r,v){const old=r.deleted;r.deleted=v;const u=getGasUrl();
+  try{if(u&&adminPass){const res=await gasPost({action:"updateResp",password:adminPass,id:r.id,patch:{deleted:v}});if(!res.ok){r.deleted=old;notify(res.error||"تعذر تنفيذ العملية",true);return false}}else LS.s("ce_resp",local)}
+  catch(e){r.deleted=old;notify("تعذر الحفظ في Google Sheets",true);return false}return true}
+function notifyUndo(msg,fn){let el=$("#ce-toast");if(!el){el=document.createElement("div");el.id="ce-toast";document.body.appendChild(el)}
+  el.className="toast";el.innerHTML="";el.append(msg+" ");const b=document.createElement("button");b.textContent="تراجع";b.style.cssText="background:#fff;color:var(--p);margin-inline-start:8px;padding:2px 10px";b.onclick=()=>{el.style.display="none";clearTimeout(toastTimer);fn()};el.appendChild(b);el.style.display="block";clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.style.display="none"},10000)}
+function delAsk(id){const r=resp.find(x=>x.id==id);if(!r)return;openConfirm("حذف الرد","سيُنقل رد «"+(r.name||"")+"» إلى سلة المحذوفات ويُستبعد من الإحصائيات والقوائم، ويمكنك التراجع أو الاستعادة لاحقاً من تبويب «المحذوفات».",()=>delDo(id))}
+async function delDo(id){const r=resp.find(x=>x.id==id);if(!r)return;if(await setDeleted(r,Date.now())){sel=null;draw();notifyUndo("تم حذف الرد",()=>restDo(id))}}
+async function restDo(id){const r=resp.find(x=>x.id==id);if(!r)return;if(await setDeleted(r,0)){draw();notify("تمت استعادة الرد")}}
+async function permDel(ids){const u=getGasUrl(),set=new Set(ids.map(String));ids=resp.filter(r=>r.deleted&&set.has(String(r.id))).map(r=>r.id);if(!ids.length)return false;
+  const sv=new Set(ids.map(String));
+  try{if(u&&adminPass){const res=await gasPost({action:"deleteResp",password:adminPass,ids});if(!res.ok){notify((res.error||"تعذر الحذف النهائي")+" — تأكد من تحديث سكربت Google Apps Script ليدعم الحذف النهائي",true);return false}}}
+  catch(e){notify("تعذر الاتصال بـ Google Sheets",true);return false}
+  if(u&&adminPass)resp=resp.filter(r=>!sv.has(String(r.id)));else{local=local.filter(r=>!sv.has(String(r.id)));resp=local;LS.s("ce_resp",local)}
+  return true}
+function purgeAsk(id){const r=resp.find(x=>x.id==id);if(!r)return;openConfirm("حذف نهائي","سيُحذف رد «"+(r.name||"")+"» نهائياً ولا يمكن استرجاعه. هل تريد المتابعة؟",async()=>{if(await permDel([id])){draw();notify("تم حذف الرد نهائياً")}})}
+function purgeAllAsk(){const R=resp.filter(r=>r.deleted);if(!R.length)return;openConfirm("إفراغ المحذوفات","سيتم حذف "+R.length+" رد نهائياً ولا يمكن استرجاعها. هل تريد المتابعة؟",async()=>{if(await permDel(R.map(r=>r.id))){draw();notify("تم إفراغ المحذوفات نهائياً")}})}
+function trash(){const R=resp.filter(r=>r.deleted).sort((a,b)=>b.deleted-a.deleted);
+  let s=`<div class="card"><h2>المحذوفات (${R.length})</h2><p class="m">الردود المحذوفة لا تظهر في الملخص أو الأرشيف أو المشاركين. يمكنك استعادة أي رد، أو حذفه نهائياً (لا يمكن التراجع عن الحذف النهائي).</p><button class="d" ${R.length?"":"disabled"} onclick="purgeAllAsk()">إفراغ المحذوفات نهائياً</button></div>`;
+  if(!R.length)return s+'<div class="card m">لا توجد ردود محذوفة.</div>';
+  return s+R.map(r=>`<div class="card row" style="flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>${esc(r.name)}</b> <span class="m" dir="ltr">${esc(r.nameEn||"")}</span><div class="m">${esc(cl(r))} · أُرسل ${dk(r.ts)} · حُذف ${dk(r.deleted)}</div></div><button onclick="restDo('${r.id}')">استعادة</button><button class="d" onclick="purgeAsk('${r.id}')">حذف نهائي</button></div>`).join("")}
+function startEdit(){const m=myRec();if(!m||!canEdit())return;editing={...m.rec,id:m.id};done=null;draw()}
+function cancelEdit(){const m=myRec();editing=null;done=m?m.id:null;draw()}
 
 function notify(msg,isErr){
   let el=$("#ce-toast");
@@ -173,12 +204,13 @@ async function flushSaveCfg(showOk){
   }
 }
 function saveCfg(immediate){
+  upsertCourse();
   clearTimeout(saveCfgTimer);
   if(immediate===true)return flushSaveCfg(true);
   saveCfgTimer=setTimeout(()=>flushSaveCfg(false),650);
 }
 function draw(){
-  const h=location.hash.match(/cert=(.+)/);if(h)return drawCert(h[1]);
+  const h=location.hash.match(/cert=([^&]+)/);if(h)return drawCert(h[1]);
   let s="";
   if(mgr)s+=`<div class="tabs"><button class="${view=="admin"?"on":""}" onclick="view='admin';draw()">لوحة المدير</button><button class="${view=="form"?"on":""}" onclick="view='form';draw()">معاينة كمتدرب</button><button class="s" style="margin-right:auto" onclick="logoutAdmin()">تسجيل خروج</button></div>`;
   s+=view=="admin"?admin():form();$("#app").innerHTML=s;if(view=="admin"&&tab=="build")dzRender();
@@ -189,30 +221,53 @@ function head(c=cfg.course){const a=[["name","الدورة"],["trainer","الم�
   const defH=(cfg.headerImg&&cfg.headerOnly)?"":`<img src="${cfg.logo||LOGO}" style="max-height:80px;max-width:100%;margin-bottom:6px"><h1>${esc(cfg.title)}</h1>`;
   return `<div class="card" style="text-align:center">${hi}${defH}${a.length?`<div class="m">${a.join(" · ")}</div>`:""}</div>`}
 function form(){
-  if(cfg.form?.closed&&!mgr){
-    return head()+`<div class="card" style="text-align:center;padding:28px 18px"><h2 style="font-size:20px;margin-bottom:10px">انتهت فترة التقييم</h2><p style="font-size:15px;margin-bottom:14px">${esc(cfg.form.closedMsg||"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.")}</p></div>`+foot();
+  const f=cfg.form||{};
+  if(closedNow()&&!mgr){
+    return head()+`<div class="card" style="text-align:center;padding:28px 18px"><h2 style="font-size:20px;margin-bottom:10px">انتهت فترة التقييم</h2><p style="font-size:15px;margin-bottom:14px">${esc(f.closedMsg||"انتهت فترة التقييم لهذه الدورة، شكراً لاهتمامكم.")}</p></div>`+foot();
   }
-  const prevSub=(cfg.form?.onceOnly!==false)?LS.g(subKey()):null;
-  if(prevSub&&!done&&!mgr){
-    return head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>تم استلام تقييمك مسبقاً ✔</h2><p>يمكن تعبئة الاستمارة مرة واحدة فقط لكل متدرب في هذه الدورة.</p>${cfg.form?.showCert!==false?`<button onclick="location.hash='cert=${esc(prevSub)}'">عرض شهادة الدورة</button>`:""}</div>`+foot();
+  const prevSub=(f.onceOnly!==false)?LS.g(subKey()):null;
+  const certBtn=id=>f.showCert!==false?`<button onclick="location.hash='cert=${esc(id)}'">عرض شهادة الدورة</button>`:"";
+  if(prevSub&&!done&&!mgr&&!editing){
+    return head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>تم استلام تقييمك مسبقاً ✔</h2><p>يمكن تعبئة الاستمارة مرة واحدة فقط لكل متدرب في هذه الدورة.</p>${editHint()}${certBtn(prevSub)}</div>`+foot();
   }
-  if(done)return head()+`<div class="card"><h2>شكراً لتعبئتك الاستمارة ✔</h2><p>تم استلام تقييمك.</p>${cfg.form?.showCert!==false?`<button onclick="location.hash='cert=${done}'">عرض شهادة الدورة</button>`:""}</div>`+foot();
-  let s=head()+(mgr&&cfg.form?.closed?`<div class="card" style="border:1px solid var(--g);background:#fff9ec"><b>تنبيه للمدير:</b> التقييم مغلق حالياً للمتدربين (ستظهر لهم نافذة انتهاء فترة التقييم).</div>`:"")+`<div class="card"><div class="g"><div><label>الاسم بالعربية <span class="req">*</span></label><input id="nm"></div><div><label>الاسم بالإنجليزية <span class="req">*</span></label><input id="ne" dir="ltr" placeholder="Full name"></div><div><label>البريد الإلكتروني</label><input id="em" type="email"></div></div><p class="m">اختر التقييم المناسب لكل بند. الحقول المعلَّمة بـ <span class="req">*</span> إلزامية.</p></div><div class="card">`;
-  cfg.items.forEach(i=>{const r=i.req?'<span class="req">*</span>':"";
+  if(done)return head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>${thanksT(f.thanksTitle,"شكراً لتعبئتك الاستمارة ✔")}</h2><p>${thanksT(f.thanksMsg,"تم استلام تقييمك.")}</p>${editHint()}${certBtn(done)}</div>`+foot();
+  const E=editing||{},sch=(f.closeAt&&!closedNow())?`<div class="m" style="text-align:center;margin:-6px 0 12px">آخر موعد للتعبئة: <b>${esc(fmtDT(f.closeAt))}</b></div>`:"";
+  const rq=f.reqContact?' <span class="req">*</span>':"";
+  let s=head()+sch+(mgr&&closedNow()?`<div class="card" style="border:1px solid var(--g);background:#fff9ec;color:#2a1520"><b>تنبيه للمدير:</b> التقييم مغلق حالياً للمتدربين (ستظهر لهم نافذة انتهاء فترة التقييم).</div>`:"")
+  +(editing?`<div class="card" style="border:1px solid var(--g)"><b>وضع التعديل:</b> عدّل إجاباتك ثم اضغط «حفظ التعديل». يمكنك التعديل مرة واحدة فقط وسيُحدَّث ردك السابق.</div>`:"")
+  +`<div class="card"><div class="g"><div><label>الاسم بالعربية <span class="req">*</span></label><input id="nm" value="${esc(E.name)}"></div><div><label>الاسم بالإنجليزية <span class="req">*</span></label><input id="ne" dir="ltr" placeholder="Full name" value="${esc(E.nameEn)}"></div>${f.collectPhone?`<div><label>رقم الجوال${rq}</label><input id="ph" type="tel" dir="ltr" inputmode="tel" placeholder="مثال: 777123456" value="${esc(E.phone)}"></div>`:""}${f.collectEmail!==false?`<div><label>البريد الإلكتروني${rq}</label><input id="em" type="email" dir="ltr" value="${esc(E.email)}"></div>`:""}</div><p class="m">اختر التقييم المناسب لكل بند. الحقول المعلَّمة بـ <span class="req">*</span> إلزامية.</p></div><div class="card">`;
+  cfg.items.forEach(i=>{const r=i.req?'<span class="req">*</span>':"",v=E.a?.[i.id];
     if(i.k=="sec")s+=`<h2 style="margin-top:12px">${esc(i.t)}</h2>`;
-    else if(i.k=="r")s+=`<div class="it"><div>${esc(i.t)} ${r}</div><div class="rt">${L.map((l,k)=>`<label style="${lvst(k)}" onclick="pick(this)"><input type="radio" name="${i.id}" value="${l[1]}"><span>${l[0]}</span></label>`).join("")}</div></div>`;
-    else s+=`<div class="it"><div>${esc(i.t)} ${r}</div><textarea id="${i.id}" rows="2"></textarea></div>`;});
-  return s+`</div><div class="np"><div id="er" class="err"></div><button onclick="submit()">إرسال التقييم</button> <button class="s" onclick="pdf('استمارة-التقييم')">تنزيل الاستمارة PDF</button></div>`+foot();
+    else if(i.k=="r")s+=`<div class="it"><div>${esc(i.t)} ${r}</div><div class="rt">${L.map((l,k)=>`<label class="${v==l[1]?"on":""}" style="${lvst(k)}" onclick="pick(this)"><input type="radio" name="${i.id}" value="${l[1]}" ${v==l[1]?"checked":""}><span>${l[0]}</span></label>`).join("")}</div></div>`;
+    else s+=`<div class="it"><div>${esc(i.t)} ${r}</div><textarea id="${i.id}" rows="2">${esc(v)}</textarea></div>`;});
+  return s+`</div><div class="np"><div id="er" class="err"></div>${editing?`<button onclick="submit()">حفظ التعديل</button> <button class="s" onclick="cancelEdit()">إلغاء</button>`:`<button onclick="submit()">إرسال التقييم</button> <button class="s" onclick="pdf('استمارة-التقييم')">تنزيل الاستمارة PDF</button>`}</div>`+foot();
 }
 async function submit(){
+  const f=cfg.form||{};
+  if(closedNow()&&!mgr){draw();return}
   const nm=$("#nm").value.trim(),ne=$("#ne").value.trim(),a={},miss=[];
+  const emEl=$("#em"),phEl=$("#ph"),em=emEl?emEl.value.trim():"",ph=phEl?phEl.value.trim():"";
   cfg.items.forEach(i=>{let v="";if(i.k=="r"){const x=document.querySelector(`input[name=${i.id}]:checked`);v=x?+x.value:""}else if(i.k=="t")v=$("#"+i.id).value.trim();
     if(i.k!="sec"){if(v!=="")a[i.id]=v;else if(i.req)miss.push(i.t)}});
+  if(f.reqContact){if(phEl&&!ph)miss.unshift("رقم الجوال");if(emEl&&!em)miss.unshift("البريد الإلكتروني")}
   if(!nm)miss.unshift("الاسم بالعربية");
   if(miss.length){$("#er").textContent="بنود إلزامية لم تُعبَّأ: "+miss.slice(0,4).join("، ")+(miss.length>4?" …":"");return}
   if(!/^[A-Za-z][A-Za-z .'\-]+$/.test(ne)){$("#er").textContent="اكتب الاسم بالإنجليزية بحروف لاتينية فقط (مثال: Ahmed Omar Salem)";return}
-  const rec={name:nm,nameEn:ne,email:$("#em").value.trim(),a,ts:Date.now(),course:{...cfg.course},items:cfg.items.map(({id,k,t})=>({id,k,t}))};
+  if(em&&!/^\S+@\S+\.\S+$/.test(em)){$("#er").textContent="البريد الإلكتروني غير صحيح";return}
+  if(ph&&(!/^\+?[\d\s\-()]{7,20}$/.test(ph)||ph.replace(/\D/g,"").length<7)){$("#er").textContent="رقم الجوال غير صحيح (أرقام فقط، ويفضّل مع رمز الدولة)";return}
+  const rec={name:nm,nameEn:ne,email:em,phone:ph,a,ts:editing?editing.ts:Date.now(),course:editing&&editing.course?{...editing.course}:{...cfg.course},items:cfg.items.map(({id,k,t})=>({id,k,t}))};
   const u=getGasUrl();
+  if(editing){
+    rec.id=editing.id;rec.et=editing.et;rec.edited=true;rec.editedAt=Date.now();
+    try{
+      if(u){
+        const res=await gasPost({action:"editSubmit",id:rec.id,token:rec.et,rec});
+        if(!res.ok){if(res.closed){cfg.form.closed=true;editing=null;draw();return}$("#er").textContent=res.error||"تعذر حفظ التعديل (تأكد من تحديث سكربت Google Apps Script ليدعم التعديل).";return}
+      }else{const n=local.findIndex(x=>x.id==rec.id);if(n>=0)local[n]={...local[n],...rec};else local.push(rec);LS.s("ce_resp",local);resp=local}
+    }catch(e){$("#er").textContent="تعذر حفظ التعديل: تحقق من الاتصال بالإنترنت.";return}
+    LS.s(myKey(),{id:rec.id,edited:true,rec});mine=rec;editing=null;done=rec.id;draw();notify("تم تحديث ردك بنجاح");return;
+  }
+  rec.et="e"+Math.random().toString(36).slice(2)+Date.now().toString(36);
   try{
     if(u){
       const res=await gasPost({action:"submit",rec});
@@ -226,12 +281,13 @@ async function submit(){
       rec.id="l"+Date.now();local.push(rec);LS.s("ce_resp",local);resp=local;
     }
   }catch(e){$("#er").textContent="تعذر الإرسال: تحقق من الاتصال بالإنترنت ورابط Google Apps Script.";return}
-  if(cfg.form?.onceOnly!==false)LS.s(subKey(),rec.id);
+  if(f.onceOnly!==false)LS.s(subKey(),rec.id);
+  LS.s(myKey(),{id:rec.id,edited:false,rec:{name:nm,nameEn:ne,email:em,phone:ph,a,ts:rec.ts,et:rec.et,course:rec.course}});
   mine=rec;done=rec.id;draw();
 }
 function admin(){
-  const tb=[["build","الأسئلة والإعدادات"],["an","الملخص"],["arch","الأرشيف"]];
-  return `<div class="tabs">${tb.map(t=>`<button class="${tab==t[0]?"on":""}" onclick="tab='${t[0]}';sel=null;draw()">${t[1]}</button>`).join("")}</div>`+({build,an,arch}[tab])();
+  const tb=[["build","الأسئلة والإعدادات"],["an","الملخص"],["ppl","المشاركون"],["arch","الأرشيف"],["trash","المحذوفات ("+resp.filter(r=>r.deleted).length+")"]];
+  return `<div class="tabs">${tb.map(t=>`<button class="${tab==t[0]?"on":""}" onclick="tab='${t[0]}';sel=null;draw()">${t[1]}</button>`).join("")}</div>`+({build,an,ppl,arch,trash}[tab])();
 }
 const fi=(o,k,l,t="text",d="")=>`<div><label>${l}</label><input type="${t}" ${d} value="${esc(cfg[o][k])}" onchange="cfg.${o}.${k}=this.value;saveCfg()"></div>`;
 function saveGasUrlInput(val){
@@ -245,7 +301,7 @@ async function refreshFromGas(){
   }catch(e){notify("تعذر التحديث",true)}
 }
 function resetCourseConfirm(){
-  openConfirm("بدء دورة جديدة","سيتم تفريغ بيانات الدورة الحالية لبدء دورة جديدة. الاستمارات السابقة تبقى محفوظة في الأرشيف.",()=>{cfg.course=blankC();saveCfg();draw()});
+  openConfirm("بدء دورة جديدة","سيتم تفريغ بيانات الدورة الحالية لبدء دورة جديدة. الاستمارات السابقة تبقى محفوظة في الأرشيف، وبيانات هذه الدورة تبقى في قائمة «الدورات السابقة» لإعادة استخدامها.",()=>{upsertCourse();cfg.course=blankC();saveCfg();draw()});
 }
 async function changeAdminPass(){
   const cur=$("#pw-cur").value,nw=$("#pw-new").value,cnf=$("#pw-cnf").value,err=$("#pw-err");
@@ -281,6 +337,7 @@ function build(){
   <label style="display:block;margin-top:10px"><input type="checkbox" style="width:auto" ${cfg.form?.showCert!==false?"checked":""} onchange="cfg.form.showCert=this.checked;saveCfg(true)"> <b>إظهار الشهادة للمتدربين بعد تعبئة الاستبيان</b> (عند إلغاء التحديد تظهر رسالة شكر فقط)</label>
   <div class="row" style="margin-top:10px"><button onclick="saveCfg(true)">حفظ الإعدادات في الجدول</button></div>
   </div>
+  ${advCards()}
   <div class="card"><h2>الشعار ورأس الهيدر ورقم الاستمارة</h2><div class="row"><img src="${cfg.logo||LOGO}" style="max-height:50px"><input type="file" accept="image/*" onchange="setLogo(this)" style="width:auto">${cfg.logo?`<button class="d" onclick="cfg.logo='';saveCfg();draw()">إزالة</button>`:""}</div>
   <div style="border-top:1px solid var(--b);margin:10px 0;padding-top:10px">
     <label><b>تصميم رأس الهيدر (اختياري)</b></label>
@@ -294,24 +351,60 @@ function build(){
     <label style="display:block;margin-top:8px"><input type="checkbox" style="width:auto" ${cfg.headerOnly?"checked":""} onchange="cfg.headerOnly=this.checked;saveCfg();draw()"> إخفاء الشعار والعنوان الافتراضي عند وجود تصميم للهيدر</label>
   </div>
   <label>عنوان الاستمارة</label><input value="${esc(cfg.title)}" onchange="cfg.title=this.value;saveCfg()"><div class="g" style="margin-top:8px">${fi("form","code","رقم الاستمارة","text",'dir="ltr"')+fi("form","date","تاريخ الإصدار","text",'dir="ltr"')+fi("form","rev","رقم المراجعة","text",'dir="ltr"')}</div></div>
-  <div class="card"><h2>بيانات الدورة الحالية (تظهر في الاستمارة والشهادة)</h2><div class="g">${fi("course","name","اسم الدورة بالعربية")+fi("course","nameEn","Course name (English)","text",'dir="ltr"')+fi("course","trainer","اسم المدرب بالعربية")+fi("course","trainerEn","Trainer (English)","text",'dir="ltr"')+fi("course","hours","عدد الساعات التدريبية","number")+fi("course","place","مكان الانعقاد")+fi("course","from","تاريخ البداية","date")+fi("course","to","تاريخ النهاية","date")}</div><h2 style="margin-top:12px">حقول إضافية للشهادة (متغيرات {f1} {f2} {f3})</h2><div class="g">${xf(0)+xf(1)+xf(2)}</div><p class="m">كل استمارة تحفظ نسخة من بيانات الدورة وأسئلتها وقت التعبئة، فلا تتأثر باستمارات الدورات اللاحقة.</p><button class="s" onclick="resetCourseConfirm()">بدء دورة جديدة</button></div>
+  <div class="card"><h2>بيانات الدورة الحالية (تظهر في الاستمارة والشهادة)</h2>${libUI()}<div class="g">${fi("course","name","اسم الدورة بالعربية")+fi("course","nameEn","Course name (English)","text",'dir="ltr"')+fi("course","trainer","اسم المدرب بالعربية")+fi("course","trainerEn","Trainer (English)","text",'dir="ltr"')+fi("course","hours","عدد الساعات التدريبية","number")+fi("course","place","مكان الانعقاد")+fi("course","from","تاريخ البداية","date")+fi("course","to","تاريخ النهاية","date")}</div><h2 style="margin-top:12px">حقول إضافية للشهادة (متغيرات {f1} {f2} {f3})</h2><div class="g">${xf(0)+xf(1)+xf(2)}</div><p class="m">كل استمارة تحفظ نسخة من بيانات الدورة وأسئلتها وقت التعبئة، فلا تتأثر باستمارات الدورات اللاحقة.</p><button class="s" onclick="resetCourseConfirm()">بدء دورة جديدة</button></div>
   <div class="card"><h2>توقيع الشهادة</h2><div class="g">${fi("sign","t","المسمى الوظيفي")+fi("sign","n","الاسم")}</div></div>
   <div class="card"><h2>تغيير كلمة مرور المدير</h2><div class="g"><div><label>كلمة المرور الحالية</label><input id="pw-cur" type="password"></div><div><label>كلمة المرور الجديدة</label><input id="pw-new" type="password"></div><div><label>تأكيد كلمة المرور الجديدة</label><input id="pw-cnf" type="password"></div></div><div id="pw-err" class="err" style="margin-top:6px"></div><button style="margin-top:10px" onclick="changeAdminPass()">حفظ كلمة المرور الجديدة</button></div>
   ${colorsCard()}${designCard()}<div class="card"><h2>بنود الاستمارة</h2>`;
   cfg.items.forEach((i,n)=>{s+=`<div class="row"><select onchange="cfg.items[${n}].k=this.value;saveCfg();draw()"><option value="r" ${i.k=="r"?"selected":""}>تقييم</option><option value="t" ${i.k=="t"?"selected":""}>نص</option><option value="sec" ${i.k=="sec"?"selected":""}>عنوان قسم</option></select><input type="text" value="${esc(i.t)}" onchange="cfg.items[${n}].t=this.value;saveCfg()">${i.k!="sec"?`<label style="white-space:nowrap"><input type="checkbox" style="width:auto" ${i.req?"checked":""} onchange="cfg.items[${n}].req=this.checked;saveCfg()"> إلزامي</label>`:""}<button class="s" onclick="mv(${n},-1)">↑</button><button class="s" onclick="mv(${n},1)">↓</button><button class="d" onclick="cfg.items.splice(${n},1);saveCfg();draw()">حذف</button></div>`});
   return s+`<button onclick="cfg.items.push({id:'q'+Date.now(),k:'r',t:'بند جديد',req:false});saveCfg();draw()">+ إضافة بند</button></div>${getGasUrl()?"":'<p class="m">وضع محلي: تُحفظ البيانات في هذا المتصفح فقط حتى يتم الربط بـ Google Sheets.</p>'}<button class="s" onclick="pdf('استمارة-التقييم',form())">تنزيل الاستمارة PDF</button><div class="card m" style="margin-top:12px">رابط الاستمارة للموظفين: <b>${esc(location.href.split("#")[0])}</b></div>`;
 }
+function advCards(){const f=cfg.form||{};
+  const ck2=(k,t,d)=>`<label style="display:block;margin-top:8px"><input type="checkbox" style="width:auto" ${d?"checked":""} onchange="cfg.form.${k}=this.checked;saveCfg(true);draw()"> ${t}</label>`;
+  return `<div class="card"><h2>إيقاف رابط الاستبيان بتاريخ محدد</h2>
+  <label>يتوقف الرابط تلقائياً عند هذا التاريخ والوقت</label>
+  <div class="row" style="flex-wrap:wrap"><input type="datetime-local" style="flex:1;min-width:220px" value="${esc(f.closeAt||"")}" onchange="cfg.form.closeAt=this.value;saveCfg(true);draw()">${f.closeAt?`<button class="d" onclick="cfg.form.closeAt='';saveCfg(true);draw()">إلغاء الجدولة</button>`:""}</div>
+  <p class="m">${f.closeAt?(closedNow()?"الرابط متوقف حالياً.":"سيتوقف الرابط في: <b>"+esc(fmtDT(f.closeAt))+"</b> ويظهر للمشاركين آخر موعد للتعبئة."):"لا يوجد موعد مجدول. يمكنك أيضاً الإغلاق اليدوي من خيار «إغلاق رابط التقييم» أعلاه."}</p></div>
+  <div class="card"><h2>تعديل المشارك لرده</h2>${ck2("allowEdit","<b>السماح للمشارك بتعديل رده مرة واحدة بعد الإرسال</b>",f.allowEdit)}
+  <p class="m">عند التعديل يُحدَّث الرد نفسه ولا يُحتسب مشاركة ثانية. يظهر زر التعديل للمشارك في صفحة الشكر وعند عودته من نفس المتصفح، ويختفي بعد استخدامه أو بعد إغلاق الرابط.</p></div>
+  <div class="card"><h2>الرسالة التي تظهر للمشارك بعد إكمال الاستبيان</h2>
+  <label>عنوان الرسالة</label><input value="${esc(f.thanksTitle||"")}" onchange="cfg.form.thanksTitle=this.value;saveCfg()">
+  <label style="display:block;margin-top:8px">نص الرسالة <span class="m">(يمكن استخدام {name} لاسم المشارك)</span></label><textarea rows="4" onchange="cfg.form.thanksMsg=this.value;saveCfg()">${esc(f.thanksMsg||"")}</textarea>
+  <div class="row" style="margin-top:8px"><button class="s" onclick="cfg.form.thanksTitle='شكراً لتعبئتك الاستمارة ✔';cfg.form.thanksMsg='تم استلام تقييمك.';saveCfg(true);draw()">استعادة الرسالة الافتراضية</button></div></div>
+  <div class="card"><h2>جمع بيانات المشاركين</h2><p class="m">الاسم يُجمع دائماً. اختر بقية البيانات التي تظهر في الاستمارة:</p>
+  ${ck2("collectPhone","جمع <b>رقم الجوال</b>",f.collectPhone)}${ck2("collectEmail","جمع <b>البريد الإلكتروني</b>",f.collectEmail!==false)}${ck2("reqContact","جعل الجوال/البريد <b>إلزامياً</b>",f.reqContact)}
+  <p class="m">تجد البيانات في تبويب «المشاركون» مع إمكانية التصدير إلى ملف Word.</p></div>
+  <div class="card"><h2>إرسال الشهادة عبر واتساب</h2>
+  <div class="g"><div><label>رمز الدولة الافتراضي (للأرقام بدون رمز)</label><input dir="ltr" value="${esc(f.waCc||"967")}" onchange="cfg.form.waCc=this.value.replace(/\D/g,'');saveCfg()"></div></div>
+  <label style="display:block;margin-top:8px">نص الرسالة <span class="m">(المتغيرات: {name} {course} {link})</span></label><textarea rows="5" onchange="cfg.form.waMsg=this.value;saveCfg()">${esc(f.waMsg||"")}</textarea>
+  <p class="m">يفتح الزر محادثة واتساب مع رقم المتدرب ورسالة جاهزة تحتوي رابط شهادته (يعمل حتى لو أُخفيت الشهادة عن المتدربين بعد التعبئة)، ثم تضغط «إرسال» في واتساب. الأزرار في تبويب «المشاركون» وفي الأرشيف.</p></div>`}
+const CF=["name","nameEn","trainer","trainerEn","hours","place","f1","f2","f3"];
+const pickC=c=>{const o={};CF.forEach(k=>o[k]=c[k]||"");return o};
+function upsertCourse(){const c=cfg.course;if(!c||!String(c.name||"").trim())return;
+  const e={...pickC(c),lastFrom:c.from||"",lastTo:c.to||""};cfg.courses=cfg.courses||[];
+  const i=cfg.courses.findIndex(x=>x.name==e.name);if(i>=0)cfg.courses[i]=e;else cfg.courses.push(e);
+  if(cfg.libHide)cfg.libHide=cfg.libHide.filter(n=>n!=e.name)}
+function libList(){const m=new Map();(cfg.courses||[]).forEach(c=>m.set(c.name,c));
+  live().slice().sort((a,b)=>b.ts-a.ts).forEach(r=>{const c=rc(r);if(c.name&&!m.has(c.name))m.set(c.name,{...pickC(c),lastFrom:c.from||"",lastTo:c.to||""})});
+  const h=cfg.libHide||[];return[...m.values()].filter(c=>!h.includes(c.name))}
+function libUI(){const A=libList();
+  if(!A.length)return '<p class="m">تُحفظ بيانات كل دورة تُدخلها تلقائياً في قائمة «الدورات السابقة» لإعادة استخدامها لاحقاً دون إعادة الكتابة.</p>';
+  return `<div class="card" style="background:var(--bg);margin-bottom:10px"><label><b>الدورات السابقة</b> <span class="m">(تُحفظ تلقائياً)</span></label><div class="row" style="flex-wrap:wrap"><select style="flex:1;min-width:220px;width:auto" onchange="libSel=this.value"><option value="">— اختر دورة سبق إدخالها —</option>${A.map(c=>`<option value="${esc(c.name)}" ${c.name==libSel?"selected":""}>${esc(c.name)}${c.trainer?" — "+esc(c.trainer):""}${c.lastFrom?" ("+esc(c.lastFrom)+")":""}</option>`).join("")}</select><button onclick="libLoad()">استخدام بيانات الدورة</button><button class="s" onclick="libDel()">إزالة من القائمة</button></div><p class="m">يُحمَّل اسم الدورة والمدرب والساعات والمكان والحقول الإضافية، ويُترك تاريخ البداية والنهاية فارغاً لتحدده للتنفيذ الجديد.</p></div>`}
+function libLoad(){const c=libList().find(x=>x.name==libSel);if(!c){notify("اختر دورة من القائمة أولاً",true);return}
+  upsertCourse();cfg.course={...blankC(),...pickC(c)};saveCfg(true);draw();notify("تم تحميل بيانات الدورة، حدّد تاريخ البداية والنهاية")}
+function libDel(){const n=libSel;if(!n){notify("اختر دورة من القائمة أولاً",true);return}
+  if(n==cfg.course.name){notify("هذه هي الدورة الحالية، لا يمكن إزالتها من القائمة",true);return}
+  openConfirm("إزالة دورة من القائمة","ستُزال «"+n+"» من قائمة الدورات السابقة. لا يؤثر ذلك على الاستمارات المحفوظة في الأرشيف.",()=>{cfg.courses=(cfg.courses||[]).filter(x=>x.name!=n);cfg.libHide=[...new Set([...(cfg.libHide||[]),n])];libSel="";saveCfg(true);draw()})}
 function mv(n,d){const m=n+d;if(m<0||m>=cfg.items.length)return;[cfg.items[n],cfg.items[m]]=[cfg.items[m],cfg.items[n]];saveCfg();draw()}
 const cnt=(v,k)=>v.filter(x=>x==L[k][1]).length;
 function pie(v){let a=0;const g=L.map((l,k)=>{const p=cnt(v,k)/v.length*100,x=`${COL[k]} ${a}% ${a+p}%`;a+=p;return x});return `<div class="pie" style="background:conic-gradient(${g.join(",")})"></div>`}
 function an(){
-  const ks=[...new Set(resp.slice().sort((a,b)=>b.ts-a.ts).map(ck))];if(!ks.includes(fc))fc=ks[0]||"";
-  const rs=resp.filter(r=>ck(r)==fc).sort((a,b)=>b.ts-a.ts),IT=rs.length?ri(rs[0]):cfg.items;cur={rs,it:IT};
+  const ks=[...new Set(live().slice().sort((a,b)=>b.ts-a.ts).map(ck))];if(!ks.includes(fc))fc=ks[0]||"";
+  const rs=live().filter(r=>ck(r)==fc).sort((a,b)=>b.ts-a.ts),IT=rs.length?ri(rs[0]):cfg.items;cur={rs,it:IT};
   const val=i=>rs.map(r=>r.a?.[i.id]).filter(x=>x),avg=v=>v.length?v.reduce((a,b)=>a+b,0)/v.length:0;
   const secs=[];let c0=null;
   IT.forEach(i=>{if(i.k=="sec"){c0={t:i.t,v:[]};secs.push(c0)}else if(i.k=="r"){if(!c0){c0={t:"عام",v:[]};secs.push(c0)}c0.v.push(...val(i))}});
   const all=secs.flatMap(x=>x.v),pct=all.length?(avg(all)*25).toFixed(1):"-";
-  let s=`<div class="card np"><div class="row"><select onchange="fc=this.value;draw()">${ks.map(k=>`<option value="${esc(k)}" ${k==fc?"selected":""}>${esc(cl(resp.find(r=>ck(r)==k)))}</option>`).join("")}</select><button onclick="pdf('ملخص-التقييم')">تنزيل PDF</button><button class="s" onclick="csv()">CSV</button></div></div>`+head(rs.length?rc(rs[0]):cfg.course)+
+  let s=`<div class="card np"><div class="row"><select onchange="fc=this.value;draw()">${ks.map(k=>`<option value="${esc(k)}" ${k==fc?"selected":""}>${esc(cl(live().find(r=>ck(r)==k)))}</option>`).join("")}</select><button onclick="pdf('ملخص-التقييم')">تنزيل PDF</button><button class="s" onclick="csv()">CSV</button></div></div>`+head(rs.length?rc(rs[0]):cfg.course)+
   `<div class="card"><div class="g"><div><div class="m">عدد الردود</div><h1>${rs.length}</h1></div><div><div class="m">نسبة الاستفادة العامة</div><h1>${pct}%</h1></div></div></div>
   <div class="card"><h2>متوسط الأقسام (من 4)</h2>${secs.filter(x=>x.v.length).map(x=>`<div class="sb"><span>${esc(x.t)}</span><div class="bar"><i style="width:${avg(x.v)*25}%"></i></div><b>${avg(x.v).toFixed(2)}</b></div>`).join("")||'<span class="m">لا توجد بيانات</span>'}</div>`;
   IT.forEach(i=>{const v=val(i);
@@ -319,15 +412,51 @@ function an(){
     else if(i.k=="t"){s+=`<div class="card"><h2>${esc(i.t)}</h2>${v.map(x=>`<div class="it">${esc(x)}</div>`).join("")||'<span class="m">لا توجد ردود</span>'}</div>`}});
   return s+foot();
 }
-function flt(){return resp.filter(r=>{const x=new Date(r.ts);return(!fl.y||x.getFullYear()==fl.y)&&(!fl.m||x.getMonth()+1==fl.m)&&(!fl.d||dk(r.ts)==fl.d)&&(!fl.c||ck(r)==fl.c)&&(!fl.q||(r.name+" "+(r.nameEn||"")).toLowerCase().includes(fl.q.toLowerCase()))}).sort((a,b)=>b.ts-a.ts)}
+const ppRows=()=>live().filter(r=>!pfc||ck(r)==pfc).sort((a,b)=>b.ts-a.ts);
+function ppl(){
+  const ks=[...new Set(live().map(ck))];if(pfc&&!ks.includes(pfc))pfc="";
+  const R=ppRows(),wn=R.filter(r=>r.phone).length;
+  let s=`<div class="card"><h2>بيانات المشاركين (${R.length})</h2><div class="row" style="flex-wrap:wrap"><select style="flex:1;min-width:200px;width:auto" onchange="pfc=this.value;draw()"><option value="">كل الدورات</option>${ks.map(k=>`<option value="${esc(k)}" ${k==pfc?"selected":""}>${esc(cl(live().find(r=>ck(r)==k)))}</option>`).join("")}</select><button onclick="wordList()">تصدير إلى Word</button><button class="s" onclick="csvList()">CSV</button><button class="s" onclick="waStart()" ${wn?"":"disabled"}>إرسال الشهادات عبر واتساب (متتابع)</button></div><p class="m">${wn} من ${R.length} لديهم رقم جوال.${cfg.form?.collectPhone?"":" لتفعيل جمع الجوال من المشاركين: الأسئلة والإعدادات ← جمع بيانات المشاركين."}</p></div>`;
+  if(!R.length)return s+'<div class="card m">لا توجد بيانات.</div>';
+  s+=`<div class="card sc"><table><tr><th>#</th><th>الاسم</th><th>الجوال</th><th>البريد</th><th>الدورة</th><th>التاريخ</th><th></th></tr>${R.map((r,n)=>`<tr><td>${n+1}</td><td>${esc(r.name)}${r.edited?' <span class="badge warn">معدّل</span>':""}</td><td dir="ltr" style="text-align:right">${esc(r.phone||"—")}</td><td dir="ltr" style="text-align:right">${esc(r.email||"—")}</td><td>${esc(cl(r))}</td><td>${dk(r.ts)}</td><td style="white-space:nowrap"><button class="s" ${r.phone?"":"disabled"} onclick="waOne('${r.id}')">واتساب</button> <button class="s" onclick="location.hash='cert=${r.id}'">الشهادة</button> <button class="d" onclick="delAsk('${r.id}')">حذف</button>${r.waSent?' <span class="badge ok">أُرسلت</span>':""}</td></tr>`).join("")}</table></div>`;
+  return s;
+}
+async function wordList(){
+  const R=ppRows();if(!R.length){notify("لا توجد بيانات للتصدير",true);return}
+  const ttl="بيانات المشاركين"+(pfc?" - "+cl(live().find(r=>ck(r)==pfc)):""),th=cfg.theme||{},hc=th.p||"#6a1b3d";
+  const rows=R.map((r,n)=>`<tr><td>${n+1}</td><td>${esc(r.name)}</td><td>${esc(r.nameEn||"")}</td><td dir="ltr" style="text-align:right">${esc(r.phone||"")}</td><td dir="ltr" style="text-align:right">${esc(r.email||"")}</td><td>${esc(cl(r))}</td><td>${dk(r.ts)}</td></tr>`).join("");
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>${esc(ttl)}</title><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:BiDi/></w:WordDocument></xml><![endif]--><style>@page{size:A4 landscape;margin:1.5cm}body{font-family:Arial,Tahoma,sans-serif;direction:rtl}h2{color:${hc}}table{border-collapse:collapse;width:100%}th,td{border:1px solid #888;padding:6px;text-align:right;font-size:12pt}th{background:${hc};color:#fff}</style></head><body dir="rtl"><h2>${esc(ttl)}</h2><p>${esc(cfg.title)} — عدد المشاركين: ${R.length} — تاريخ التصدير: ${dk(Date.now())}</p><table><tr><th>#</th><th>الاسم بالعربية</th><th>الاسم بالإنجليزية</th><th>الجوال</th><th>البريد الإلكتروني</th><th>الدورة</th><th>التاريخ</th></tr>${rows}</table></body></html>`;
+  try{await saveFile("participants-"+dk(Date.now())+".doc",new Blob(["\ufeff"+html],{type:"application/msword"}));notify("تم تصدير الملف، افتحه بـ Word للطباعة")}catch(e){notify("التنزيل غير متاح هنا",true)}
+}
+async function csvList(){
+  const R=ppRows(),q=x=>'"'+String(x??"").replace(/"/g,'""')+'"';
+  const t="\ufeff"+[["الاسم","English name","الجوال","البريد","الدورة","التاريخ"].map(q).join(","),...R.map(r=>[r.name,r.nameEn,r.phone,r.email,cl(r),dk(r.ts)].map(q).join(","))].join("\n");
+  try{await saveFile("participants.csv",t)}catch(e){notify("التنزيل غير متاح هنا",true)}
+}
+function waNum(p){let d=String(p||"").replace(/\D/g,"");if(!d)return"";if(d.startsWith("00"))return d.slice(2);const cc=String(cfg.form?.waCc||"967").replace(/\D/g,"");if(d.startsWith("0"))return cc+d.replace(/^0+/,"");return(!d.startsWith(cc)&&d.length<=9)?cc+d:d}
+function waMsg(r){return String(cfg.form?.waMsg||"{link}").replace(/\{name\}/g,r.name||"").replace(/\{course\}/g,rc(r).name||"").replace(/\{link\}/g,link(r.id))}
+function waSend(r){const n=waNum(r.phone);if(n.length<8){notify("رقم الجوال غير صالح للمتدرب: "+(r.name||""),true);return false}
+  window.open("https://wa.me/"+n+"?text="+encodeURIComponent(waMsg(r)),"_blank");return true}
+async function markSent(r){r.waSent=Date.now();const u=getGasUrl();try{if(u&&adminPass)await gasPost({action:"updateResp",password:adminPass,id:r.id,patch:{waSent:r.waSent}});else LS.s("ce_resp",local)}catch(e){}}
+function waOne(id){const r=live().find(x=>x.id==id);if(!r)return;if(waSend(r)){markSent(r);setTimeout(draw,300)}}
+function waStart(){waQ=ppRows().filter(r=>r.phone&&!r.waSent);if(!waQ.length){notify("لا توجد شهادات متبقية للإرسال (جميعها أُرسلت أو بدون رقم جوال)",true);return}waI=0;waModal()}
+function waModal(){closeModal();const r=waQ[waI];if(!r){notify("انتهت قائمة الإرسال");draw();return}
+  modalEl=document.createElement("div");modalEl.className="mbk";
+  modalEl.innerHTML=`<div class="mbox"><h2>إرسال الشهادات عبر واتساب</h2><p class="m">${waI+1} من ${waQ.length}</p><p><b>${esc(r.name)}</b><br><span dir="ltr">${esc(r.phone)}</span></p><p class="m">اضغط الزر لفتح واتساب برسالة جاهزة، أرسلها ثم ارجع لهذه الصفحة للمتدرب التالي.</p><div class="row" style="flex-wrap:wrap;justify-content:flex-end"><button class="s" id="w-x">إغلاق</button><button class="s" id="w-skip">تخطي</button><button id="w-go">فتح واتساب</button></div></div>`;
+  document.body.appendChild(modalEl);
+  modalEl.querySelector("#w-x").onclick=()=>{closeModal();draw()};
+  modalEl.querySelector("#w-skip").onclick=()=>{waI++;waModal()};
+  modalEl.querySelector("#w-go").onclick=()=>{if(waSend(r)){markSent(r);waI++;waModal()}};
+}
+function flt(){return live().filter(r=>{const x=new Date(r.ts);return(!fl.y||x.getFullYear()==fl.y)&&(!fl.m||x.getMonth()+1==fl.m)&&(!fl.d||dk(r.ts)==fl.d)&&(!fl.c||ck(r)==fl.c)&&(!fl.q||(r.name+" "+(r.nameEn||"")).toLowerCase().includes(fl.q.toLowerCase()))}).sort((a,b)=>b.ts-a.ts)}
 function arch(){
   const R=flt();if(sel){const n=R.findIndex(r=>r.id==sel);if(n>=0)return ind(R,n);sel=null}
-  const ys=[...new Set(resp.map(r=>new Date(r.ts).getFullYear()))].sort((a,b)=>b-a),cs=[...new Set(resp.map(ck))];
-  let s=`<div class="card"><h2>الأرشيف (${R.length} من ${resp.length})</h2><div class="g"><div><label>السنة</label><select onchange="fl.y=this.value;draw()"><option value="">الكل</option>${ys.map(y=>`<option ${fl.y==y?"selected":""}>${y}</option>`).join("")}</select></div><div><label>الشهر</label><select onchange="fl.m=this.value;draw()"><option value="">الكل</option>${MO.map((m,n)=>`<option value="${n+1}" ${fl.m==n+1?"selected":""}>${m}</option>`).join("")}</select></div><div><label>اليوم</label><input type="date" value="${fl.d}" onchange="fl.d=this.value;draw()"></div><div><label>الدورة</label><select onchange="fl.c=this.value;draw()"><option value="">الكل</option>${cs.map(k=>`<option value="${esc(k)}" ${fl.c==k?"selected":""}>${esc(cl(resp.find(r=>ck(r)==k)))}</option>`).join("")}</select></div><div><label>بحث بالاسم</label><input value="${esc(fl.q)}" onchange="fl.q=this.value;draw()"></div></div><p><button class="s" onclick="fl={y:'',m:'',d:'',c:'',q:''};draw()">مسح التصفية</button></p></div>`;
+  const ys=[...new Set(live().map(r=>new Date(r.ts).getFullYear()))].sort((a,b)=>b-a),cs=[...new Set(live().map(ck))];
+  let s=`<div class="card"><h2>الأرشيف (${R.length} من ${live().length})</h2><div class="g"><div><label>السنة</label><select onchange="fl.y=this.value;draw()"><option value="">الكل</option>${ys.map(y=>`<option ${fl.y==y?"selected":""}>${y}</option>`).join("")}</select></div><div><label>الشهر</label><select onchange="fl.m=this.value;draw()"><option value="">الكل</option>${MO.map((m,n)=>`<option value="${n+1}" ${fl.m==n+1?"selected":""}>${m}</option>`).join("")}</select></div><div><label>اليوم</label><input type="date" value="${fl.d}" onchange="fl.d=this.value;draw()"></div><div><label>الدورة</label><select onchange="fl.c=this.value;draw()"><option value="">الكل</option>${cs.map(k=>`<option value="${esc(k)}" ${fl.c==k?"selected":""}>${esc(cl(live().find(r=>ck(r)==k)))}</option>`).join("")}</select></div><div><label>بحث بالاسم</label><input value="${esc(fl.q)}" onchange="fl.q=this.value;draw()"></div></div><p><button class="s" onclick="fl={y:'',m:'',d:'',c:'',q:''};draw()">مسح التصفية</button></p></div>`;
   const gl=r=>{const x=new Date(r.ts);return MO[x.getMonth()]+" "+x.getFullYear()};let last="";
   if(!R.length)s+='<div class="card m">لا توجد استمارات مطابقة.</div>';
   R.forEach(r=>{const g=gl(r);if(g!=last){last=g;s+=`<h2 style="margin:14px 0 6px">${g} <span class="m">(${R.filter(z=>gl(z)==g).length})</span></h2>`}
-    s+=`<div class="card row" style="flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>${esc(r.name)}</b> <span class="m" dir="ltr">${esc(r.nameEn)}</span><div class="m">${esc(cl(r))} · ${dk(r.ts)}</div></div><button onclick="sel='${r.id}';draw()">عرض الاستمارة</button><button class="s" onclick="location.hash='cert=${r.id}'">الشهادة</button>${r.email?`<a href="mailto:${esc(r.email)}?subject=${encodeURIComponent("شهادة دورة "+(rc(r).name||""))}&body=${encodeURIComponent("يمكنك عرض شهادتك من الرابط:\n"+link(r.id))}"><button class="s">بريد</button></a>`:""}</div>`});
+    s+=`<div class="card row" style="flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>${esc(r.name)}</b> <span class="m" dir="ltr">${esc(r.nameEn)}</span><div class="m">${esc(cl(r))} · ${dk(r.ts)}</div></div><button onclick="sel='${r.id}';draw()">عرض الاستمارة</button><button class="s" onclick="location.hash='cert=${r.id}'">الشهادة</button>${r.phone?`<button class="s" onclick="waOne('${r.id}')">واتساب</button>`:""}<button class="d" onclick="delAsk('${r.id}')">حذف</button>${r.email?`<a href="mailto:${esc(r.email)}?subject=${encodeURIComponent("شهادة دورة "+(rc(r).name||""))}&body=${encodeURIComponent("يمكنك عرض شهادتك من الرابط:\n"+link(r.id))}"><button class="s">بريد</button></a>`:""}</div>`});
   return s;
 }
 const ef=(r,k,l,t="text",d="",v)=>`<div><label>${l}</label><input type="${t}" ${d} value="${esc(v??r[k])}" onchange="upd('${r.id}',0,'${k}',this.value)"></div>`,ec=(r,k,l,t="text")=>`<div><label>${l}</label><input type="${t}" ${k.endsWith("En")?'dir="ltr"':""} value="${esc(rc(r)[k])}" onchange="upd('${r.id}',1,'${k}',this.value)"></div>`;
@@ -342,7 +471,7 @@ async function upd(id,isC,k,v){const r=resp.find(x=>x.id==id);if(!r)return;const
   }catch(e){notify("تعذر الحفظ في Google Sheets",true)}}
 function ind(R,n){
   const r=R[n],nx=R[n+1],pv=R[n-1],fn="استمارة-"+String(r.nameEn||"trainee").replace(/[^A-Za-z0-9]/g,"")+"-"+dk(r.ts);
-  let s=`<div class="card np"><div class="row" style="flex-wrap:wrap"><button class="s" onclick="sel=null;draw()">← الأرشيف</button><button class="s" onclick="sel='${nx?nx.id:""}';draw()" ${nx?"":"disabled"}>‹ الأقدم</button><button class="s" onclick="sel='${pv?pv.id:""}';draw()" ${pv?"":"disabled"}>الأحدث ›</button><button onclick="pdf('${fn}')">تنزيل PDF</button><button class="s" onclick="location.hash='cert=${r.id}'">الشهادة</button></div></div>`+head(rc(r))+`<div class="card np"><h2>بيانات الشهادة لهذا المتدرب (تظهر بالأحمر في الشهادة)</h2><div class="g">${ef(r,"name","الاسم بالعربية")+ef(r,"nameEn","Name (English)",'dir="ltr"')+ec(r,"name","اسم الدورة")+ec(r,"nameEn","Course (English)")+ec(r,"trainer","المدرب")+ec(r,"trainerEn","Trainer (English)")+ec(r,"hours","عدد الساعات","number")+ec(r,"from","من تاريخ","date")+ec(r,"to","إلى تاريخ","date")+ef(r,"issued","تاريخ الإصدار","date","",r.issued||dk(r.ts))+cfg.fl.map((lb,i)=>lb?ec(r,"f"+(i+1),lb):"").join("")}</div></div><div class="card"><h1>${esc(r.name)}</h1><div class="m" dir="auto">${esc(r.nameEn)} · ${esc(r.email)} · ${new Date(r.ts).toLocaleString("ar")} · ${n+1} من ${R.length}</div></div><div class="card">`;
+  let s=`<div class="card np"><div class="row" style="flex-wrap:wrap"><button class="s" onclick="sel=null;draw()">← الأرشيف</button><button class="s" onclick="sel='${nx?nx.id:""}';draw()" ${nx?"":"disabled"}>‹ الأقدم</button><button class="s" onclick="sel='${pv?pv.id:""}';draw()" ${pv?"":"disabled"}>الأحدث ›</button><button onclick="pdf('${fn}')">تنزيل PDF</button>${r.phone?`<button class="s" onclick="waOne('${r.id}')">إرسال الشهادة واتساب</button>`:""}<button class="d" onclick="delAsk('${r.id}')">حذف الرد</button><button class="s" onclick="location.hash='cert=${r.id}'">الشهادة</button></div></div>`+head(rc(r))+`<div class="card np"><h2>بيانات الشهادة لهذا المتدرب (تظهر بالأحمر في الشهادة)</h2><div class="g">${ef(r,"name","الاسم بالعربية")+ef(r,"nameEn","Name (English)",'dir="ltr"')+ef(r,"phone","رقم الجوال","tel")+ef(r,"email","البريد الإلكتروني","email")+ec(r,"name","اسم الدورة")+ec(r,"nameEn","Course (English)")+ec(r,"trainer","المدرب")+ec(r,"trainerEn","Trainer (English)")+ec(r,"hours","عدد الساعات","number")+ec(r,"from","من تاريخ","date")+ec(r,"to","إلى تاريخ","date")+ef(r,"issued","تاريخ الإصدار","date","",r.issued||dk(r.ts))+cfg.fl.map((lb,i)=>lb?ec(r,"f"+(i+1),lb):"").join("")}</div></div><div class="card"><h1>${esc(r.name)}</h1><div class="m" dir="auto">${esc(r.nameEn)} · ${esc(r.email)} · <span dir="ltr">${esc(r.phone||"")}</span> · ${new Date(r.ts).toLocaleString("ar")} · ${n+1} من ${R.length}</div></div><div class="card">`;
   ri(r).forEach(i=>{const v=r.a?.[i.id];
     if(i.k=="sec")s+=`<h2 style="margin-top:12px">${esc(i.t)}</h2>`;
     else if(i.k=="r")s+=`<div class="it"><div>${esc(i.t)}</div><div class="rt">${L.map((l,k)=>`<label style="${v==l[1]?`background:${lvc(k)||sc()};color:${ct(lvc(k)||sc())};border-color:${lvc(k)||sc()}`:"opacity:.45"}">${l[0]}</label>`).join("")}</div></div>`;
@@ -351,7 +480,7 @@ function ind(R,n){
 }
 async function csv(){
   const it=cur.it.filter(i=>i.k!="sec"),q=x=>'"'+String(x??"").replace(/"/g,'""')+'"';
-  const t="\ufeff"+[["الاسم","English name","البريد","التاريخ",...it.map(i=>i.t)].map(q).join(","),...cur.rs.map(r=>[r.name,r.nameEn,r.email,dk(r.ts),...it.map(i=>r.a?.[i.id])].map(q).join(","))].join("\n");
+  const t="\ufeff"+[["الاسم","English name","الجوال","البريد","التاريخ",...it.map(i=>i.t)].map(q).join(","),...cur.rs.map(r=>[r.name,r.nameEn,r.phone,r.email,dk(r.ts),...it.map(i=>r.a?.[i.id])].map(q).join(","))].join("\n");
   try{await saveFile("results.csv",t)}catch(e){notify("التنزيل غير متاح هنا",true)}
 }
 const fit=(w,v,b)=>Math.max(12,Math.min(b,Math.floor(w/(String(v||"").length*.56+.01))));
@@ -386,7 +515,7 @@ function certHTML(r,dz){
   const o=cfg.cd.logo||{};if(!o.h||dz)h+=`<img${dc("logo")} class="${dz?"dz"+(selK=="logo"?" sel":""):""}" src="${cfg.logo||LOGO}" style="position:absolute;left:${o.l??898}px;top:${o.t??58}px;height:${o.fs??84}px${o.h?";opacity:.25":""}">`;
   return h+"</div>"}
 async function drawCert(id){
-  if(!mgr&&cfg.form?.showCert===false){
+  if(!mgr&&cfg.form?.showCert===false&&!/&wa=1/.test(location.hash)){
     $("#app").innerHTML=head()+`<div class="card" style="text-align:center;padding:24px 18px"><h2>الشهادة غير متاحة حالياً</h2><p>تم إيقاف عرض الشهادات للمتدربين من قِبل الإدارة.</p><button class="s" onclick="location.hash='';draw()">العودة</button></div>`+foot();
     return;
   }
